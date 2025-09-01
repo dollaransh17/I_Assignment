@@ -6,11 +6,6 @@ import fetch from 'node-fetch';
 // Load environment variables from .env file
 dotenv.config();
 
-// --- DEBUGGING LINE ---
-// This will print the token that the server has loaded.
-console.log("Server is attempting to use this API Token:", process.env.REPLICATE_API_TOKEN);
-// --- END DEBUGGING ---
-
 const app = express();
 const port = 3001;
 
@@ -130,7 +125,12 @@ app.post('/api/generate-caption', async (req, res) => {
             return handleError(res, `Caption generation failed: ${prediction.error}`, 500);
         }
 
-        const caption = prediction.output.join('').trim();
+        // --- FIX STARTS HERE ---
+        // Handle cases where the output might be an array or a single string
+        const output = prediction.output;
+        const caption = Array.isArray(output) ? output.join('').trim() : String(output).trim();
+        // --- FIX ENDS HERE ---
+
         res.json({ caption });
 
      } catch (error) {
@@ -149,7 +149,6 @@ app.get('/api/image-proxy', async (req, res) => {
         if (!response.ok) {
             throw new Error(`Failed to fetch image: ${response.statusText}`);
         }
-        // Use the modern .arrayBuffer() and Buffer.from() for better stability
         const arrayBuffer = await response.arrayBuffer();
         const imageBuffer = Buffer.from(arrayBuffer);
         const contentType = response.headers.get('content-type');
@@ -164,7 +163,8 @@ app.get('/api/image-proxy', async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
-    if (!REPLICATE_API_TOKEN) {
-        console.warn('Ensure you have set your REPLICATE_API_TOKEN in a .env file or as an environment variable.');
-    }
+    // *** THIS IS THE NEW DIAGNOSTIC LINE ***
+    console.log(`Server is attempting to use this API Token: ${REPLICATE_API_TOKEN}`);
 });
+
+
